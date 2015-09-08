@@ -1,0 +1,13 @@
+Package: modUtils
+Title: Collection of utils for model building and tuning.
+Version: 0.0.0.9000
+Authors@R: person("Wade", "Cooper", email = "wcooper@healthesystems.com", role = c("aut", "cre"))
+Description: A collection of utilities for data pre-processing and tuning -- dummy coding, removing high VIF, near zero variance, class balancing, and some model evaluation functions (e.g., confusion matrix values, custom caret::summaryFunction for mutliclass models).
+Depends: R (>= 3.0.0)
+License: GPL-2
+LazyData: true
+Imports: dplyr,
+    data.table,
+    stringr,
+    caret,
+    Hmisc
