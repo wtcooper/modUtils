@@ -3,10 +3,23 @@ Collection of utils for model building and tuning.
 
 ## Overview
 A small collection of some utility functions I use frequently for data pre-processing and model evaluations.
-Some functions are small tweaks to  caret functions (e.g., dummy coder using a data.table approach; near zero variance
-without comparison to second most abundanct level but uses overall frequency instead) or custom comparisons to 
-use with caret (e.g., multiClassSummary. for multiclass models).  Also includes a VIF method to remove variables
-with high multicollinearity. <br />
+
+#### Preprossing functions include: <br />
+removeHighVIF(): Removes columns with high multicollinearity automatically based on VIF. <br />
+removeZeroVar(): Rip of caret::nearZeroVar that just looks at % of most frequent, not relative to the second most frequent. <br />
+convToBinary(): Converts select columns to binary. <br />
+convToDummy(): Converts select factor/character columns to dummy coded columns using a data.table approach. <br />
+balanceClasses(): Simple random class balancer for multinomial targets that does up- or down-sampling. <br />
+
+
+#### Model evaluation functions include: <br />
+getBalancedProbCut(): Returns a probability threshold that minimizes difference between sensitivity and specificity (balanced accuracy). <br />
+multiClassSummary(): Custom caret:summaryFunction for multiclass targets. <br />
+getBinEvalVals(): Returns AUC (ROC) and Gini coefficient for binary classification. <br />
+getCMVals(): Returns a subset of classification metrics for binary and multiclass classification.
+
+
+
 
 ## Installation
 
