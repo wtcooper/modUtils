@@ -179,3 +179,37 @@ balanceClasses <- function(df, target, classSize){
 	}
 	do.call("rbind", dfls)
 }
+
+
+
+#' Get's the basic summary stats for a data set.
+#' 
+#' @param df data.frame or data.table
+#' @export
+getSummaryTable <- function(df) {
+	require(dplyr)
+	
+	df = df %>% dplyr::ungroup()
+	
+	minFnx=function(x) min(x, na.rm=T)
+	maxFnx=function(x) max(x, na.rm=T)
+	meanFnx=function(x) mean(x, na.rm=T)
+	quant1Fnx=function(x) quantile(x, probs=c(0.25), na.rm=T)
+	medianFnx=function(x) median(x, na.rm=T)
+	quant3Fnx=function(x) quantile(x, probs=c(0.75), na.rm=T)
+	missingFnx = function(x) length(x[is.na(x)])
+	
+	summy = rbind(
+			df %>% dplyr::summarize_each(funs(minFnx)),
+			df %>% dplyr::summarize_each(funs(quant1Fnx)),
+			df %>% dplyr::summarize_each(funs(medianFnx)),
+			df %>% dplyr::summarize_each(funs(meanFnx)),
+			df %>% dplyr::summarize_each(funs(quant3Fnx)),
+			df %>% dplyr::summarize_each(funs(maxFnx)),
+			df %>% dplyr::summarize_each(funs(missingFnx)))
+	
+	summy = data.frame(names(summy), t(summy), stringsAsFactors=FALSE)	
+	names(summy)=c("Var","Min","LowQuart","Median","Mean","UpQuart","Max","NumNA")
+	rownames(summy)=NULL
+	summy	
+}
