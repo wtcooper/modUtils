@@ -182,19 +182,15 @@ balanceClasses <- function(df, target, classSize){
 
 
 
-#' Get's the basic summary stats for a data set.
+#' Get's the basic summary stats for a data set, in data.frame format: 
+#' seperate row for each column in a data.frame (factors/characters removed).
 #' 
 #' @param df data.frame or data.table
 #' @export
 getSummaryTable <- function(df) {
 	require(dplyr)
 	
-	df = df %>% dplyr::ungroup() %>% data.frame()
-	
-	## Remove factor or character variables
-	gdNms = names(df[, !sapply(df, function(x) is.character(x) | is.factor(x) ), drop=FALSE])
-	df= df %>% dplyr::select(one_of(gdNms))
-	
+	df = df %>% dplyr::ungroup()
 	
 	minFnx=function(x) min(x, na.rm=T)
 	maxFnx=function(x) max(x, na.rm=T)
@@ -203,6 +199,7 @@ getSummaryTable <- function(df) {
 	medianFnx=function(x) median(x, na.rm=T)
 	quant3Fnx=function(x) quantile(x, probs=c(0.75), na.rm=T)
 	missingFnx = function(x) length(x[is.na(x)])
+	numUniFnx = function(x) length(unique(x[!is.na(x)]))
 	
 	summy = rbind(
 			df %>% dplyr::summarize_each(funs(minFnx)),
@@ -211,10 +208,11 @@ getSummaryTable <- function(df) {
 			df %>% dplyr::summarize_each(funs(meanFnx)),
 			df %>% dplyr::summarize_each(funs(quant3Fnx)),
 			df %>% dplyr::summarize_each(funs(maxFnx)),
+			df %>% dplyr::summarize_each(funs(numUniFnx)),
 			df %>% dplyr::summarize_each(funs(missingFnx)))
 	
 	summy = data.frame(names(summy), t(summy), stringsAsFactors=FALSE)	
-	names(summy)=c("Var","Min","LowQuart","Median","Mean","UpQuart","Max","NumNA")
+	names(summy)=c("Var","Min","LowQuart","Median","Mean","UpQuart","Max","NumUnique","NumNA")
 	rownames(summy)=NULL
 	summy	
 }
