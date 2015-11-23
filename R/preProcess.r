@@ -190,7 +190,11 @@ balanceClasses <- function(df, target, classSize){
 getSummaryTable <- function(df) {
 	require(dplyr)
 	
-	df = df %>% dplyr::ungroup()
+	df = df %>% dplyr::ungroup() %>% data.frame()
+	
+	## Remove factor or character variables
+	gdNms = names(df[, !sapply(df, function(x) is.character(x) | is.factor(x) ), drop=FALSE])
+	df= df %>% dplyr::select(one_of(gdNms))
 	
 	minFnx=function(x) min(x, na.rm=T)
 	maxFnx=function(x) max(x, na.rm=T)
