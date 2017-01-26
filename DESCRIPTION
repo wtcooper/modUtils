@@ -13,6 +13,7 @@ LazyData: true
 Imports:
     dplyr,
 	purrr,
+	lubridate,
 	data.table,
     stringr,
     caret

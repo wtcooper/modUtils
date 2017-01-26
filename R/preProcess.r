@@ -271,7 +271,7 @@ balanceClasses <- function(df, target, classSize){
 getSummaryTable <- function(df) {
 	require(dplyr)
 	require(purrr)
-	
+	require(lubridate)
 	
 	df = df %>% dplyr::ungroup() %>% data.frame()
 	
