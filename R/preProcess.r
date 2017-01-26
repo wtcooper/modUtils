@@ -267,14 +267,106 @@ balanceClasses <- function(df, target, classSize){
 #' 
 #' @param df data.frame or data.table
 #' @export
+
 getSummaryTable <- function(df) {
 	require(dplyr)
+	require(purrr)
+	
 	
 	df = df %>% dplyr::ungroup() %>% data.frame()
 	
-	## Remove factor or character variables
-	gdNms = names(df[, !sapply(df, function(x) is.character(x) | is.factor(x) ), drop=FALSE])
-	df= df %>% dplyr::select(one_of(gdNms))
+	charNms = names(df[, sapply(df, function(x) is.character(x) | is.factor(x) ), drop=FALSE])
+	numNms =  names(df[, sapply(df, function(x) is.integer(x) | is.numeric(x) ), drop=FALSE])
+	dateNms =  names(df[, sapply(df, function(x) is.POSIXt(x) | is.Date(x) ), drop=FALSE])
+	
+	
+	
+	####################################
+	## Do the date variables
+	####################################
+	
+	dfDate = df %>% dplyr::select(one_of(dateNms)) 
+	
+	missingFnx = function(x) length(x[is.na(x)])
+	numUniFnx = function(x) length(unique(x[!is.na(x)]))
+	minFnx=function(x) as.character(min(x, na.rm=T))
+	maxFnx=function(x) as.character(max(x, na.rm=T))
+	
+	summyDate = rbind(
+			dfDate %>% dplyr::summarize_all(funs(length)),
+			dfDate %>% dplyr::summarize_all(funs(numUniFnx)),
+			dfDate %>% dplyr::summarize_all(funs(missingFnx)),
+			dfDate %>% dplyr::summarize_all(funs(minFnx)),
+			dfDate %>% dplyr::summarize_all(funs(maxFnx))
+	)
+	
+	summyDate = data.frame(names(summyDate), t(summyDate), stringsAsFactors=FALSE)	
+	names(summyDate)=c("Var","n", "NumUnique","NumNA","MinDate", "MaxDate")
+	rownames(summyDate)=NULL
+	
+	
+	
+	
+	####################################
+	## Do the character/factor variables
+	####################################
+	
+	dfChar = df %>% dplyr::select(one_of(charNms)) 
+	
+	
+	####################
+	## Get the top values
+	####################
+	
+	
+	sumFnx <- function(x) {
+		tab=as_data_frame(prop.table(table(x))) %>% arrange(desc(n))
+		res=paste0("(",round(tab$n*100,0),"%) ",tab$x)
+		if (length(res)>25) res=res[1:25]
+		res
+	}
+	
+	padLists <- function(x, mv) {
+		xlen = length(x)
+		if (xlen < mv) x = c(x, rep("", mv-xlen))
+		x
+	}
+	
+	dfCharTop = dfChar %>% map(sumFnx) 
+	maxVal = dfCharTop %>% dmap(length) %>% max
+	dfCharTop = dfCharTop %>% dmap(function (x) padLists(x,maxVal))
+	summyCharTop = data.frame(names(dfCharTop), t(dfCharTop), stringsAsFactors=F)	
+	names(summyCharTop) = c("Var",paste0("Top",1:dim(dfCharTop)[1]))	
+	rownames(summyCharTop)=NULL
+	
+	
+	####################
+	## Get unique and number missing
+	####################
+	
+	missingFnx = function(x) length(x[is.na(x)])
+	numUniFnx = function(x) length(unique(x[!is.na(x)]))
+	
+	
+	summyChar = rbind(
+			dfChar %>% dplyr::summarize_each(funs(length)),
+			dfChar %>% dplyr::summarize_each(funs(numUniFnx)),
+			dfChar %>% dplyr::summarize_each(funs(missingFnx))
+	)
+	
+	summyChar = data.frame(names(summyChar), t(summyChar), stringsAsFactors=FALSE)	
+	names(summyChar)=c("Var","n", "NumUnique","NumNA")
+	rownames(summyChar)=NULL
+	
+	summyChar = summyChar %>% left_join(summyCharTop, by="Var")
+	
+	
+	
+	####################################
+	## Do numerics
+	####################################
+	
+	dfNum = df %>% dplyr::select(one_of(numNms))
 	
 	minFnx=function(x) min(x, na.rm=T)
 	maxFnx=function(x) max(x, na.rm=T)
@@ -285,18 +377,22 @@ getSummaryTable <- function(df) {
 	missingFnx = function(x) length(x[is.na(x)])
 	numUniFnx = function(x) length(unique(x[!is.na(x)]))
 	
-	summy = rbind(
-			df %>% dplyr::summarize_each(funs(minFnx)),
-			df %>% dplyr::summarize_each(funs(quant1Fnx)),
-			df %>% dplyr::summarize_each(funs(medianFnx)),
-			df %>% dplyr::summarize_each(funs(meanFnx)),
-			df %>% dplyr::summarize_each(funs(quant3Fnx)),
-			df %>% dplyr::summarize_each(funs(maxFnx)),
-			df %>% dplyr::summarize_each(funs(numUniFnx)),
-			df %>% dplyr::summarize_each(funs(missingFnx)))
+	summyNum = rbind(
+			dfNum %>% dplyr::summarize_each(funs(length)),
+			dfNum %>% dplyr::summarize_each(funs(numUniFnx)),
+			dfNum %>% dplyr::summarize_each(funs(missingFnx)),
+			dfNum %>% dplyr::summarize_each(funs(minFnx)),
+			dfNum %>% dplyr::summarize_each(funs(quant1Fnx)),
+			dfNum %>% dplyr::summarize_each(funs(medianFnx)),
+			dfNum %>% dplyr::summarize_each(funs(meanFnx)),
+			dfNum %>% dplyr::summarize_each(funs(quant3Fnx)),
+			dfNum %>% dplyr::summarize_each(funs(maxFnx))
+	)
 	
-	summy = data.frame(names(summy), t(summy), stringsAsFactors=FALSE)	
-	names(summy)=c("Var","Min","LowQuart","Median","Mean","UpQuart","Max","NumUnique","NumNA")
-	rownames(summy)=NULL
-	summy	
+	summyNum = data.frame(names(summyNum), t(summyNum), stringsAsFactors=F)	
+	names(summyNum)=c("Var","n", "NumUnique","NumNA","Min","LowQuart","Median","Mean","UpQuart","Max")
+	rownames(summyNum)=NULL
+	
+	list(CharFields=summyChar, NumFields=summyNum, DateFields=summyDate)
+	
 }
