@@ -5,6 +5,7 @@ Collection of utils for model building and tuning.
 A small collection of some utility functions I use frequently for data pre-processing and model evaluations.
 
 #### Preprossing functions include: <br />
+getBasicCleanData(): Wrapper function to do many of the functions below sequentially. <br />
 removeHighVIF(): Removes columns with high multicollinearity automatically based on VIF. <br />
 removeZeroVar(): Rip of caret::nearZeroVar that just looks at % of most frequent, not relative to the second most frequent. <br />
 convToBinary(): Converts select columns to binary. <br />
@@ -14,8 +15,10 @@ balanceClasses(): Simple random class balancer for multinomial targets that does
 
 #### Model evaluation functions include: <br />
 getBalancedProbCut(): Returns a probability threshold that minimizes difference between sensitivity and specificity (balanced accuracy). <br />
+getBalancedAcc(): Returns the balanced accuracy by choosing a probability threshold value where Specificity == Sensitivity. <br />
+getAUC(): Returns AUC. <br />
+getGINI(): Returns Gini. <br />
 multiClassSummary(): Custom caret:summaryFunction for multiclass targets. <br />
-getBinEvalVals(): Returns AUC (ROC) and Gini coefficient for binary classification. <br />
 getCMVals(): Returns a subset of classification metrics for binary and multiclass classification.
 
 

@@ -1,3 +1,129 @@
+
+
+#' Compute the area under the ROC (AUC)
+#'
+#' This function computes the area under the receiver-operator
+#' characteristic (AUC)
+#'
+#' @param actual binary vector
+#' @param predicted real-valued vector that defines the ranking
+#' @export
+getAUC <- function(actual, predicted)
+{
+	# convert to binary vector if not
+	if (all(sort(unique(actual))!=c(0,1))) actual=as.integer(as.factor(actual))-1
+	
+	r <- rank(predicted)
+	n_pos <- as.numeric(sum(actual==1))
+	n_neg <- as.numeric(length(actual) - n_pos)
+	auc <- (sum(r[actual==1]) - n_pos*(n_pos+1)/2) / (n_pos*n_neg)
+	names(auc) = "AUC"
+	auc
+}
+
+
+
+#' Compute the Gini coefficient 
+#'
+#' This function computes the Gini coefficient as (2*(AUC-.5))
+#'
+#' @param actual binary vector
+#' @param predicted real-valued vector that defines the ranking
+#' @export
+getGINI <- function(actual, predicted) {
+	
+	gini <- 2.*(getAUC(actual,predicted)-.5)
+	names(gini) = "Gini"
+	gini
+}
+
+
+
+
+#' Get's the probability cutoff for a binomial classification 
+#' model that minimizes the difference between sensitivity and
+#' specificity. 
+#' 
+#' @param prob predicted probability
+#' @param obs observed labels
+#' @export
+getBalancedProbCut <- function(prob, obs, posLabel, negLabel, probSeq = seq(0.001, 0.999, by=0.001)) {
+	
+	
+	
+	vals=sapply(probSeq, function(cut) {
+				pred = ifelse(prob>cut, posLabel, negLabel)
+				cm = confusionMatrix(pred, obs, positive = posLabel)
+				c(cut=cut, diff=abs(as.numeric(cm$byClass[1])-as.numeric(cm$byClass[2])))
+			})
+	
+	vals = as.data.frame(t(vals))
+	(vals %>% arrange(diff) %>% head(1))$cut	
+	
+}
+
+
+
+
+
+#' Get's the balanced accuracy by choosing a probability
+#' threshold value where Specificity == Sensitivity at the resolution
+#' of the crit parameter.  
+#' 
+#' @param prob predicted probability
+#' @param obs observed labels
+#' @param posLabel the positive label (e.g. YES)
+#' @param negLabel the negative label (e.g. NO)
+#' @param crit criical value resolution for the difference in sensitivity==specificity
+#' @param verbose boolean flag to print out the difference value
+#' @export
+getBalancedAcc <- function(prob, obs, posLabel, negLabel, crit=0.0001, verbose=F) {
+	
+	## Get the starting sequence for the probability threshold values 
+	startMin = 0
+	startMax = 1
+	probSeq = seq(startMin, startMax, length.out=20 ) 
+	
+	## difVal will record what the different is for abs(sensitivity - specificity)
+	## note: the loop will continue until this difference is < crit
+	difVal = 1
+	
+	counter = 0 
+	while ( (difVal > crit) & (counter < 10) ) {
+		
+		## Get a dataset of threshold cut value, difference, and the accuracy
+		vals=sapply(probSeq, function(cut) {
+					pred = ifelse(prob>cut, posLabel, negLabel)
+					cm = suppressWarnings(confusionMatrix(pred, obs, positive = posLabel))
+					c(cut=cut, diff=abs(as.numeric(cm$byClass[1])-as.numeric(cm$byClass[2])), acc=as.numeric(cm$overall[1]))
+				})
+		
+		vals = as.data.frame(t(vals))
+		
+		## Get the mininum difference
+		difVal = min(vals$diff)
+		
+		## Get new probSeq to test 
+		idx = which(vals$diff == difVal)[1]
+		startMin = ifelse(idx>1, vals$cut[idx-1], 0.0)
+		startMax = ifelse(idx<length(vals$cut), vals$cut[idx+1], 1.0)
+		
+		## Here just do a length of 10 to scale down one order of magnitude
+		probSeq = seq(startMin, startMax, length.out=10) 
+		
+		counter = counter + 1
+		
+		if(verbose) cat("Difference value: ", difVal, "\tCounter: ", counter, "\n")
+		
+	}
+	
+	## Return the final accuracy with the lowerst difference
+	(vals %>% arrange(diff) %>% head(1))$acc	
+}
+
+
+
+
 #' Pulls confusion matrix metrics from predicted and observed labels,
 #' works for both binomial and multinomial.  Calls caret confusionMatrix()
 #' and then returns as a vector. 
@@ -26,46 +152,6 @@ getCMVals <- function (pred, obs) {
 	CMVals
 }
 
-
-#' Pulls the AUC and Gini values from predicted probability and 
-#' observed labels. 
-#' 
-#' @param prob predicted probability
-#' @param obs observed labels
-#' @export
-getBinEvalVals <- function (prob, obs) {
-	require(Hmisc)
-	
-	tvals=rcorr.cens(prob, obs)[1:2]
-	names(tvals)=c("AUC","Gini")
-	tvals
-}
-
-
-
-#' Get's the probability cutoff for a binomial classification 
-#' model that minimizes the difference between sensitivity and
-#' specificity. 
-#' 
-#' @param prob predicted probability
-#' @param obs observed labels
-#' @export
-getBalancedProbCut <- function(prob, obs, posLabel, negLabel) {
-	require(caret)
-	
-	probSeq = seq(0.001, 0.999, by=0.001)
-	
-	
-	vals=sapply(probSeq, function(cut) {
-				pred = ifelse(prob>cut, posLabel, negLabel)
-				cm = confusionMatrix(pred, obs, positive = posLabel)
-				c(cut=cut, diff=abs(as.numeric(cm$byClass[1])-as.numeric(cm$byClass[2])))
-			})
-	
-	vals = as.data.frame(t(vals))
-	(vals %>% arrange(diff) %>% head(1))$cut	
-	
-}
 
 
 

@@ -1,4 +1,84 @@
 
+#' Does some basic cleaning of the dataset (imputation, zero variance, VIF for multicollinearity,
+#' or transformations).  Note: imputation and transformations done using caret::preProcess,
+#' VIF done using car::vif, and zero inflation done using a modified version of caret's zeroinf function.
+#' The VIF function is slow, but not sure how to speed up unless using a multithreaded version
+#' of covariance functions used internally by car::vif(), maybe MS/Revolution R Open would do this, 
+#' haven't tried though.
+#' 
+#' @param df data frame
+#' @param cleanFnx list of cleaning/preprocessing to do, defaults: c("impute", "zeroVar", "vif", "transform")
+#' @param transType c("center","scale") (default), also can do 'Range', 'YeoJohnson', 'BoxCox', others
+#' @param imputeType "medianImpute" (default), "knnImpute", may be others (see ?caret::preProcess)
+#' @param freqCutoff minimum % of the most common value (simple tweak of caret function)
+#' @param vifCutoff variance inflation factor cutoff level (default=10, which is low threshold)
+#' @param colsToKeep vector of column names that should not be removed via VIF
+#' @examples
+#' data(iris)
+#' doBasicDataClean(iris)
+#' @export
+getBasicCleanData <- function(df, cleanFnx = c("impute", "zeroVar", "vif", "transform"), 
+		transType=c("center", "scale"), imputeType="medianImpute", freqCutoff=0.95, vifCutoff=10, colsToKeep=NULL) {
+	require(caret)
+	
+	returnList = list()
+	
+	isDT = "data.table" %in% class(df) 
+	
+	## Need to convert to data.frame 
+	if (isDT) df = df %>% data.frame()
+	
+	if ("impute" %in% cleanFnx) {
+		cat("Imputing dataset\n")
+		### Impute the training data
+		datImpute=preProcess(df[, !sapply(df, is.factor)], method=imputeType) #"knnImpute",
+		df[, !sapply(df, is.factor)]=predict(datImpute, df[, !sapply(df, is.factor)])
+		
+		returnList[["Impute"]] = datImpute
+	}
+	
+	
+	if ("zeroVar" %in% cleanFnx) {
+		cat("Zero variance check of dataset\n")
+		
+		## This is rip of caret function: just looks at % of most frequent, not
+		##  relative to the second most frequent
+		freqRatio <- apply(df, 2, function(data) {
+					t <- prop.table(table(data[!is.na(data)]))[1]
+				})
+		nms = names(freqRatio[freqRatio>freqCutoff])
+		if (!is.null(colsToKeep)) nms = nms[which(!(nms %in% colsToKeep))] # remove some of the columns to remove
+		if (length(nms)>0) df=df %>% select(-one_of(nms))  
+	}
+	
+	
+	if ("vif" %in% cleanFnx) {
+		cat("VIF check of dataset\n")
+		
+		## Remove high multicollinearity via VIF variables (instead of correlations below)
+		dftemp = vifCut(df, vifCutoff)
+		nms = unique(c(names(dftemp), colsToKeep))
+		df= df %>% select(one_of(nms))
+	}
+	
+	
+	# Rescale them all after done removing all other filters
+	if ("transform" %in% cleanFnx) {
+		cat(paste("Transforming dataset using methods",transType, "\n"))
+		datScale=preProcess(df[, !sapply(df, is.factor)], method=transType)
+		df[, !sapply(df, is.factor)]=predict(datScale, df[, !sapply(df, is.factor)])
+		returnList[["Scale"]] = datScale
+	}
+	
+	
+	
+	if (isDT) df = df %>% data.table()
+	returnList[["Data"]] = df
+	
+	returnList
+}
+
+
 #' Removes columns with high multicollinearity automatically based on VIF.
 #' Can also include list of columns to keep, but these will be added
 #' at the end of the consecutive search so it'll retain any multicollinearity.
