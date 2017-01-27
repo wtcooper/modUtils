@@ -275,9 +275,10 @@ getSummaryTable <- function(df) {
 	
 	df = df %>% dplyr::ungroup() %>% data.frame()
 	
-	charNms = names(df[, sapply(df, function(x) is.character(x) | is.factor(x) ), drop=FALSE])
-	numNms =  names(df[, sapply(df, function(x) is.integer(x) | is.numeric(x) ), drop=FALSE])
-	dateNms =  names(df[, sapply(df, function(x) is.POSIXt(x) | is.Date(x) ), drop=FALSE])
+	charNms = names(df[, sapply(df, function(x) (is.character(x) | is.factor(x)) & any(complete.cases(x)) ), drop=FALSE])
+	numNms =  names(df[, sapply(df, function(x) (is.integer(x) | is.numeric(x)) & any(complete.cases(x))), drop=FALSE])
+	dateNms =  names(df[, sapply(df, function(x) (is.POSIXt(x) | is.Date(x)) & any(complete.cases(x))), drop=FALSE])
+	
 	
 	
 	
