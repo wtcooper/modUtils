@@ -281,119 +281,132 @@ getSummaryTable <- function(df) {
 	
 	
 	
+	datLs = list()
 	
 	####################################
 	## Do the date variables
 	####################################
-	
-	dfDate = df %>% dplyr::select(one_of(dateNms)) 
-	
-	missingFnx = function(x) length(x[is.na(x)])
-	numUniFnx = function(x) length(unique(x[!is.na(x)]))
-	minFnx=function(x) as.character(min(x, na.rm=T))
-	maxFnx=function(x) as.character(max(x, na.rm=T))
-	
-	summyDate = rbind(
-			dfDate %>% dplyr::summarize_all(funs(length)),
-			dfDate %>% dplyr::summarize_all(funs(numUniFnx)),
-			dfDate %>% dplyr::summarize_all(funs(missingFnx)),
-			dfDate %>% dplyr::summarize_all(funs(minFnx)),
-			dfDate %>% dplyr::summarize_all(funs(maxFnx))
-	)
-	
-	summyDate = data.frame(names(summyDate), t(summyDate), stringsAsFactors=FALSE)	
-	names(summyDate)=c("Var","n", "NumUnique","NumNA","MinDate", "MaxDate")
-	rownames(summyDate)=NULL
-	
-	
+	if (length(dateNms)>0) {
+		
+		dfDate = df %>% dplyr::select(one_of(dateNms)) 
+		
+		missingFnx = function(x) length(x[is.na(x)])
+		numUniFnx = function(x) length(unique(x[!is.na(x)]))
+		minFnx=function(x) as.character(min(x, na.rm=T))
+		maxFnx=function(x) as.character(max(x, na.rm=T))
+		
+		summyDate = rbind(
+				dfDate %>% dplyr::summarize_all(funs(length)),
+				dfDate %>% dplyr::summarize_all(funs(numUniFnx)),
+				dfDate %>% dplyr::summarize_all(funs(missingFnx)),
+				dfDate %>% dplyr::summarize_all(funs(minFnx)),
+				dfDate %>% dplyr::summarize_all(funs(maxFnx))
+		)
+		
+		summyDate = data.frame(names(summyDate), t(summyDate), stringsAsFactors=FALSE)	
+		names(summyDate)=c("Var","n", "NumUnique","NumNA","MinDate", "MaxDate")
+		rownames(summyDate)=NULL
+		
+		datLs[["DateFields"]]=summyDate	
+	}
 	
 	
 	####################################
 	## Do the character/factor variables
 	####################################
 	
-	dfChar = df %>% dplyr::select(one_of(charNms)) 
-	
-	
-	####################
-	## Get the top values
-	####################
-	
-	
-	sumFnx <- function(x) {
-		tab=as_data_frame(prop.table(table(x))) %>% arrange(desc(n))
-		res=paste0("(",round(tab$n*100,0),"%) ",tab$x)
-		if (length(res)>25) res=res[1:25]
-		res
+	if (length(charNms)>0){
+		
+		dfChar = df %>% dplyr::select(one_of(charNms)) 
+		
+		
+		####################
+		## Get the top values
+		####################
+		
+		
+		sumFnx <- function(x) {
+			tab=as_data_frame(prop.table(table(x))) %>% arrange(desc(n))
+			res=paste0("(",round(tab$n*100,0),"%) ",tab$x)
+			if (length(res)>25) res=res[1:25]
+			res
+		}
+		
+		padLists <- function(x, mv) {
+			xlen = length(x)
+			if (xlen < mv) x = c(x, rep("", mv-xlen))
+			x
+		}
+		
+		dfCharTop = dfChar %>% map(sumFnx) 
+		maxVal = dfCharTop %>% dmap(length) %>% max
+		dfCharTop = dfCharTop %>% dmap(function (x) padLists(x,maxVal))
+		summyCharTop = data.frame(names(dfCharTop), t(dfCharTop), stringsAsFactors=F)	
+		names(summyCharTop) = c("Var",paste0("Top",1:dim(dfCharTop)[1]))	
+		rownames(summyCharTop)=NULL
+		
+		
+		####################
+		## Get unique and number missing
+		####################
+		
+		missingFnx = function(x) length(x[is.na(x)])
+		numUniFnx = function(x) length(unique(x[!is.na(x)]))
+		
+		
+		summyChar = rbind(
+				dfChar %>% dplyr::summarize_all(funs(length)),
+				dfChar %>% dplyr::summarize_all(funs(numUniFnx)),
+				dfChar %>% dplyr::summarize_all(funs(missingFnx))
+		)
+		
+		summyChar = data.frame(names(summyChar), t(summyChar), stringsAsFactors=FALSE)	
+		names(summyChar)=c("Var","n", "NumUnique","NumNA")
+		rownames(summyChar)=NULL
+		
+		summyChar = summyChar %>% left_join(summyCharTop, by="Var")
+		
+		datLs[["CharFields"]]=summyChar	
+		
 	}
-	
-	padLists <- function(x, mv) {
-		xlen = length(x)
-		if (xlen < mv) x = c(x, rep("", mv-xlen))
-		x
-	}
-	
-	dfCharTop = dfChar %>% map(sumFnx) 
-	maxVal = dfCharTop %>% dmap(length) %>% max
-	dfCharTop = dfCharTop %>% dmap(function (x) padLists(x,maxVal))
-	summyCharTop = data.frame(names(dfCharTop), t(dfCharTop), stringsAsFactors=F)	
-	names(summyCharTop) = c("Var",paste0("Top",1:dim(dfCharTop)[1]))	
-	rownames(summyCharTop)=NULL
-	
-	
-	####################
-	## Get unique and number missing
-	####################
-	
-	missingFnx = function(x) length(x[is.na(x)])
-	numUniFnx = function(x) length(unique(x[!is.na(x)]))
-	
-	
-	summyChar = rbind(
-			dfChar %>% dplyr::summarize_all(funs(length)),
-			dfChar %>% dplyr::summarize_all(funs(numUniFnx)),
-			dfChar %>% dplyr::summarize_all(funs(missingFnx))
-	)
-	
-	summyChar = data.frame(names(summyChar), t(summyChar), stringsAsFactors=FALSE)	
-	names(summyChar)=c("Var","n", "NumUnique","NumNA")
-	rownames(summyChar)=NULL
-	
-	summyChar = summyChar %>% left_join(summyCharTop, by="Var")
-	
 	
 	
 	####################################
 	## Do numerics
 	####################################
 	
-	dfNum = df %>% dplyr::select(one_of(numNms))
+	if (length(numNms)>0){
+		
+		dfNum = df %>% dplyr::select(one_of(numNms))
+		
+		minFnx=function(x) min(x, na.rm=T)
+		maxFnx=function(x) max(x, na.rm=T)
+		meanFnx=function(x) mean(x, na.rm=T)
+		quant1Fnx=function(x) quantile(x, probs=c(0.25), na.rm=T)
+		medianFnx=function(x) median(x, na.rm=T)
+		quant3Fnx=function(x) quantile(x, probs=c(0.75), na.rm=T)
+		missingFnx = function(x) length(x[is.na(x)])
+		numUniFnx = function(x) length(unique(x[!is.na(x)]))
+		
+		summyNum = rbind(
+				dfNum %>% dplyr::summarize_all(funs(length)),
+				dfNum %>% dplyr::summarize_all(funs(numUniFnx)),
+				dfNum %>% dplyr::summarize_all(funs(missingFnx)),
+				dfNum %>% dplyr::summarize_all(funs(minFnx)),
+				dfNum %>% dplyr::summarize_all(funs(quant1Fnx)),
+				dfNum %>% dplyr::summarize_all(funs(medianFnx)),
+				dfNum %>% dplyr::summarize_all(funs(meanFnx)),
+				dfNum %>% dplyr::summarize_all(funs(quant3Fnx)),
+				dfNum %>% dplyr::summarize_all(funs(maxFnx))
+		)
+		
+		summyNum = data.frame(names(summyNum), t(summyNum), stringsAsFactors=F)	
+		names(summyNum)=c("Var","n", "NumUnique","NumNA","Min","LowQuart","Median","Mean","UpQuart","Max")
+		rownames(summyNum)=NULL
+		
+		datLs[["NumFields"]]=summyNum	
+		
+	}
 	
-	minFnx=function(x) min(x, na.rm=T)
-	maxFnx=function(x) max(x, na.rm=T)
-	meanFnx=function(x) mean(x, na.rm=T)
-	quant1Fnx=function(x) quantile(x, probs=c(0.25), na.rm=T)
-	medianFnx=function(x) median(x, na.rm=T)
-	quant3Fnx=function(x) quantile(x, probs=c(0.75), na.rm=T)
-	missingFnx = function(x) length(x[is.na(x)])
-	numUniFnx = function(x) length(unique(x[!is.na(x)]))
-	
-	summyNum = rbind(
-			dfNum %>% dplyr::summarize_all(funs(length)),
-			dfNum %>% dplyr::summarize_all(funs(numUniFnx)),
-			dfNum %>% dplyr::summarize_all(funs(missingFnx)),
-			dfNum %>% dplyr::summarize_all(funs(minFnx)),
-			dfNum %>% dplyr::summarize_all(funs(quant1Fnx)),
-			dfNum %>% dplyr::summarize_all(funs(medianFnx)),
-			dfNum %>% dplyr::summarize_all(funs(meanFnx)),
-			dfNum %>% dplyr::summarize_all(funs(quant3Fnx)),
-			dfNum %>% dplyr::summarize_all(funs(maxFnx))
-	)
-	
-	summyNum = data.frame(names(summyNum), t(summyNum), stringsAsFactors=F)	
-	names(summyNum)=c("Var","n", "NumUnique","NumNA","Min","LowQuart","Median","Mean","UpQuart","Max")
-	rownames(summyNum)=NULL
-	
-	list(CharFields=summyChar, NumFields=summyNum, DateFields=summyDate)
-	
+	datLs
 }
