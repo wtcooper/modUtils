@@ -350,9 +350,9 @@ getSummaryTable <- function(df) {
 	
 	
 	summyChar = rbind(
-			dfChar %>% dplyr::summarize_each(funs(length)),
-			dfChar %>% dplyr::summarize_each(funs(numUniFnx)),
-			dfChar %>% dplyr::summarize_each(funs(missingFnx))
+			dfChar %>% dplyr::summarize_all(funs(length)),
+			dfChar %>% dplyr::summarize_all(funs(numUniFnx)),
+			dfChar %>% dplyr::summarize_all(funs(missingFnx))
 	)
 	
 	summyChar = data.frame(names(summyChar), t(summyChar), stringsAsFactors=FALSE)	
@@ -379,15 +379,15 @@ getSummaryTable <- function(df) {
 	numUniFnx = function(x) length(unique(x[!is.na(x)]))
 	
 	summyNum = rbind(
-			dfNum %>% dplyr::summarize_each(funs(length)),
-			dfNum %>% dplyr::summarize_each(funs(numUniFnx)),
-			dfNum %>% dplyr::summarize_each(funs(missingFnx)),
-			dfNum %>% dplyr::summarize_each(funs(minFnx)),
-			dfNum %>% dplyr::summarize_each(funs(quant1Fnx)),
-			dfNum %>% dplyr::summarize_each(funs(medianFnx)),
-			dfNum %>% dplyr::summarize_each(funs(meanFnx)),
-			dfNum %>% dplyr::summarize_each(funs(quant3Fnx)),
-			dfNum %>% dplyr::summarize_each(funs(maxFnx))
+			dfNum %>% dplyr::summarize_all(funs(length)),
+			dfNum %>% dplyr::summarize_all(funs(numUniFnx)),
+			dfNum %>% dplyr::summarize_all(funs(missingFnx)),
+			dfNum %>% dplyr::summarize_all(funs(minFnx)),
+			dfNum %>% dplyr::summarize_all(funs(quant1Fnx)),
+			dfNum %>% dplyr::summarize_all(funs(medianFnx)),
+			dfNum %>% dplyr::summarize_all(funs(meanFnx)),
+			dfNum %>% dplyr::summarize_all(funs(quant3Fnx)),
+			dfNum %>% dplyr::summarize_all(funs(maxFnx))
 	)
 	
 	summyNum = data.frame(names(summyNum), t(summyNum), stringsAsFactors=F)	
