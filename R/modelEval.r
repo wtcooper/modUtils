@@ -155,8 +155,21 @@ getCMVals <- function (pred, obs) {
 
 
 
-#' Get's evaluation metrics for a multiclass classification model.
-#' Includes calculation of a custom balanced accuracy that is the product
+#' Use multiClassMetrics(data, lev, model).  Left here for backwards compat. 
+#' 
+#' @param data data.frame with columns 'pred' and 'obs' for predicted and observed labels
+#' @param lev caret summaryFunction optional parameter
+#' @param model caret summaryFunction optional parameter
+#' @export
+multiClassSummary <- function(data, lev = NULL, model = NULL)  {
+	multiClassMetrics(data, lev, model) 
+}
+
+
+
+#' Get's class-specific evaluation metrics for a multiclass classification model.
+#' For each class, includes sensitivity, specificity, and balanced accuracy.
+#' Also includes calculation of a custom balanced accuracy that is the product
 #' of a specific labels balanced accuracy (mean of spec and sens) times 
 #' the minimum of spec or sens.  
 #'  
@@ -167,10 +180,9 @@ getCMVals <- function (pred, obs) {
 #' @param lev caret summaryFunction optional parameter
 #' @param model caret summaryFunction optional parameter
 #' @export
-multiClassSummary <- function(data, lev = NULL, model = NULL)  {
+multiClassMetrics <- function(data, lev = NULL, model = NULL)  {
 	require(stringr)
 	require(caret)
-	
 	
 	CM = confusionMatrix(data[, "pred"], data[, "obs"])
 	df=as.data.frame(CM$byClass)[,c(1,2,8),drop=F]; nms=str_replace(rownames(df),"Class: ","")
@@ -184,9 +196,111 @@ multiClassSummary <- function(data, lev = NULL, model = NULL)  {
 	geoMeanBalAcc = prod(df$BalAccAdj)/length(df$BalAccAdj)
 	
 	df=unlist(df); names(df)=paste(substr(names(df), 1, nchar(names(df))-1),"_",nms,sep="")
-	CMVals =c(CM$overall[1:2], df, meanBalAcc=arithMeanBalAcc, geoMeanBalAcc=geoMeanBalAcc)
+	CMVals =c(df, meanBalAcc=arithMeanBalAcc, geoMeanBalAcc=geoMeanBalAcc)
 	names(CMVals)=str_replace_all(names(CMVals), "Sensitivity","Sens")
 	names(CMVals)=str_replace_all(names(CMVals), "Specificity","Spec")
 	names(CMVals)=str_replace_all(names(CMVals), "Balanced Accuracy","BalAcc")
 	CMVals
 }
+
+
+#' Get's overall evaluation metrics for a multiclass classification model.
+#' Includes overall accuracy and kappa, and then the arithmetic mean of 
+#' all classes for sensitivty, specificity, detection rate, and balanced accuracy.
+#' Additionally includes one-vs-all calculations of AUC and log loss, which is
+#' presented as the mean value across all one-vs-all calculations.  
+#'  
+#' Designed to work as caret summaryFunction where data is a data.frame
+#' with columns 'pred' and 'obs' for predicted and observed labels, and the class
+#' specific probabilities (columns as label names).  
+#' 
+#' Adapted from code by Zach Meyer: http://www.r-bloggers.com/error-metrics-for-multi-class-problems-in-r-beyond-accuracy-and-kappa/
+#' 
+#' @param data data.frame with columns 'pred', 'obs' for predicted and observed labels, and a column for each class probability. 
+#' @param lev caret summaryFunction optional parameter
+#' @param model caret summaryFunction optional parameter
+#' @export
+multiClassMetricsMeans <- function (data, lev = NULL, model = NULL){
+	
+	#Load Libraries
+	require(caret)
+	
+	#Check data
+	if (!all(levels(data[, "pred"]) == levels(data[, "obs"]))) 
+		stop("levels of observed and predicted data do not match")
+	
+	
+	
+	## Get the 
+	aucFnx <- function(actual, predicted)
+	{
+		# convert to binary vector if not
+		if (all(sort(unique(actual))!=c(0,1))) actual=as.integer(as.factor(actual))-1
+		
+		r <- rank(predicted)
+		n_pos <- as.numeric(sum(actual==1))
+		n_neg <- as.numeric(length(actual) - n_pos)
+		auc <- (sum(r[actual==1]) - n_pos*(n_pos+1)/2) / (n_pos*n_neg)
+		auc
+	}
+	
+	
+	
+	ll <- function(actual, predicted)
+	{
+		# convert to binary vector if not
+		if (all(sort(unique(actual))!=c(0,1))) actual=as.integer(as.factor(actual))-1
+		
+		score <- -(actual*log(predicted) + (1-actual)*log(1-predicted))
+		score[actual==predicted] <- 0
+		score[is.nan(score)] <- Inf
+		score
+	}
+	
+	logLoss <- function(actual, predicted) mean(ll(actual, predicted))
+	
+	
+	
+	
+	
+	#Calculate custom one-vs-all stats for each class
+	prob_stats <- lapply(levels(data[, "pred"]), function(class){
+				
+				#Grab one-vs-all data for the class
+				pred <- ifelse(data[, "pred"] == class, 1, 0)
+				obs  <- ifelse(data[,  "obs"] == class, 1, 0)
+				prob <- data[,class]
+				
+				#Calculate one-vs-all AUC and logLoss and return
+				cap_prob <- pmin(pmax(prob, .000001), .999999)
+				prob_stats <- c(aucFnx(obs, prob), logLoss(obs, cap_prob))
+				names(prob_stats) <- c('ROC', 'logLoss')
+				return(prob_stats) 
+			})
+	prob_stats <- do.call(rbind, prob_stats)
+	rownames(prob_stats) <- paste('Class:', levels(data[, "pred"]))
+	
+	#Calculate confusion matrix-based statistics
+	CM <- confusionMatrix(data[, "pred"], data[, "obs"])
+	
+	#Aggregate and average class-wise stats
+	#Todo: add weights
+	class_stats <- cbind(CM$byClass, prob_stats)
+	class_stats <- colMeans(class_stats)
+	
+	#Aggregate overall stats
+	overall_stats <- c(CM$overall)
+	
+	#Combine overall with class-wise stats and remove some stats we don't want 
+	stats <- c(overall_stats, class_stats)
+	stats <- stats[! names(stats) %in% 
+					c('AccuracyLower', 'AccuracyUpper', 'AccuracyNull',
+							'AccuracyPValue', 'McnemarPValue',
+							'Prevalence', 'Detection Prevalence')]
+	
+	#Clean names and return
+	names(stats) <- gsub('[[:blank:]]+', '_', names(stats))
+	return(stats)
+	
+}
+

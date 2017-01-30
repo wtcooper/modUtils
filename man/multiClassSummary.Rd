@@ -2,13 +2,7 @@
 % Please edit documentation in R/modelEval.r
 \name{multiClassSummary}
 \alias{multiClassSummary}
-\title{Get's evaluation metrics for a multiclass classification model.
-Includes calculation of a custom balanced accuracy that is the product
-of a specific labels balanced accuracy (mean of spec and sens) times 
-the minimum of spec or sens.  
- 
-Designed to work as caret summaryFunction where data is a data.frame
-with columns 'pred' and 'obs' for predicted and observed labels.}
+\title{Use multiClassMetrics(data, lev, model).  Left here for backwards compat.}
 \usage{
 multiClassSummary(data, lev = NULL, model = NULL)
 }
@@ -20,12 +14,6 @@ multiClassSummary(data, lev = NULL, model = NULL)
 \item{model}{caret summaryFunction optional parameter}
 }
 \description{
-Get's evaluation metrics for a multiclass classification model.
-Includes calculation of a custom balanced accuracy that is the product
-of a specific labels balanced accuracy (mean of spec and sens) times 
-the minimum of spec or sens.  
- 
-Designed to work as caret summaryFunction where data is a data.frame
-with columns 'pred' and 'obs' for predicted and observed labels.
+Use multiClassMetrics(data, lev, model).  Left here for backwards compat.
 }
 
