@@ -155,18 +155,6 @@ getCMVals <- function (pred, obs) {
 
 
 
-#' Use multiClassMetrics(data, lev, model).  Left here for backwards compat. 
-#' 
-#' @param data data.frame with columns 'pred' and 'obs' for predicted and observed labels
-#' @param lev caret summaryFunction optional parameter
-#' @param model caret summaryFunction optional parameter
-#' @export
-multiClassSummary <- function(data, lev = NULL, model = NULL)  {
-	multiClassMetrics(data, lev, model) 
-}
-
-
-
 #' Get's class-specific evaluation metrics for a multiclass classification model.
 #' For each class, includes sensitivity, specificity, and balanced accuracy.
 #' Also includes calculation of a custom balanced accuracy that is the product
