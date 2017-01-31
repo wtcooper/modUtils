@@ -231,35 +231,50 @@ convToDummy <- function(dfOrig, colNms) {
 
 
 #' Simple balancing of classes for multinomial. If up-sample, do with 
-#' replacement, if down sample no replacement.
+#' replacement, if down sample no replacement.  For the final class
+#' sizes, pass a vector of the desired class sizes that is in the same 
+#' order as the original data (e.g., if run table(df[,target])
 #' 
 #' @param df data frame
 #' @param target target name of the dataset
-#' @param classSize the number of observations in each target class
+#' @param finClassSize vector of desired class sizes
 #' @export
-balanceClasses <- function(df, target, classSize){
+balanceClasses = function(df, target, finClassSize){
 	require(dplyr)
 	
-	tab=table(df %>% select_(target))
+	isDT = "data.table" %in% class(df) 
+	if (isDT) df = as_data_frame(df)
+	
+	tab=table(df[,target])
+	
+	
 	
 	dfls=list()
 	for (i in 1:length(tab)) {
-		dfls[[i]]=eval(substitute(filter(df, target == names(tab)[i]), list(target = as.name(target))))
-		len=length(dfls[[i]][,1])
+		nm=names(tab)[i]
 		
-		if (len==classSize) {
+		dfls[[i]] = df %>% rename_("Var"=target) 
+		dfls[[i]] = dfls[[i]] %>% filter(Var==nm)
+		
+		len=dim(dfls[[i]])[1]
+		
+		if (len==finClassSize[i]) {
 			dfls[[i]]=dfls[[i]]
-		} else if (len<classSize) {
+		} else if (len<finClassSize[i]) {
 			# add new observations
-			newObs=dfls[[i]][base::sample(len, classSize-len, replace=TRUE),]
+			newObs=dfls[[i]][base::sample(len, finClassSize[i]-len, replace=TRUE),]
 			dfls[[i]]=rbind(dfls[[i]], newObs)
 		} else {
-			dfls[[i]]=dfls[[i]][base::sample(len, classSize, replace=FALSE),]
+			dfls[[i]]=dfls[[i]][base::sample(len, finClassSize[i], replace=FALSE),]
 		}
+		
+		names(dfls[[i]])[which(names(dfls[[i]])=="Var")]=target
 	}
-	do.call("rbind", dfls)
+	
+	finDat= do.call("rbind", dfls)
+	if (isDT) finDat = data.table(finDat)
+	finDat
 }
-
 
 
 #' Get's the basic summary stats for a data set, in data.frame format: 

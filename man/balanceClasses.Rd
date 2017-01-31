@@ -3,19 +3,23 @@
 \name{balanceClasses}
 \alias{balanceClasses}
 \title{Simple balancing of classes for multinomial. If up-sample, do with 
-replacement, if down sample no replacement.}
+replacement, if down sample no replacement.  For the final class
+sizes, pass a vector of the desired class sizes that is in the same 
+order as the original data (e.g., if run table(df[,target])}
 \usage{
-balanceClasses(df, target, classSize)
+balanceClasses(df, target, finClassSize)
 }
 \arguments{
 \item{df}{data frame}
 
 \item{target}{target name of the dataset}
 
-\item{classSize}{the number of observations in each target class}
+\item{finClassSize}{vector of desired class sizes}
 }
 \description{
 Simple balancing of classes for multinomial. If up-sample, do with 
-replacement, if down sample no replacement.
+replacement, if down sample no replacement.  For the final class
+sizes, pass a vector of the desired class sizes that is in the same 
+order as the original data (e.g., if run table(df[,target])
 }
 
