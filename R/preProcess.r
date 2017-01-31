@@ -47,7 +47,7 @@ getBasicCleanData <- function(df, cleanFnx = c("impute", "zeroVar", "vif", "tran
 		cat("VIF check of dataset\n")
 		
 		## Remove high multicollinearity via VIF variables (instead of correlations below)
-		dftemp = vifCut(df, vifCutoff)
+		dftemp = removeHighVIF(df, vifCutoff)
 		nms = unique(c(names(dftemp), colsToKeep))
 		df= df %>% select(one_of(nms))
 	}
