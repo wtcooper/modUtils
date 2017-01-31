@@ -28,15 +28,6 @@ getBasicCleanData <- function(df, cleanFnx = c("impute", "zeroVar", "vif", "tran
 	## Need to convert to data.frame 
 	if (isDT) df = df %>% data.frame()
 	
-	if ("impute" %in% cleanFnx) {
-		cat("Imputing dataset\n")
-		### Impute the training data
-		datImpute=preProcess(df[, !sapply(df, is.factor)], method=imputeType) #"knnImpute",
-		df[, !sapply(df, is.factor)]=predict(datImpute, df[, !sapply(df, is.factor)])
-		
-		returnList[["Impute"]] = datImpute
-	}
-	
 	
 	if ("zeroVar" %in% cleanFnx) {
 		cat("Zero variance check of dataset\n")
@@ -70,6 +61,15 @@ getBasicCleanData <- function(df, cleanFnx = c("impute", "zeroVar", "vif", "tran
 		returnList[["Scale"]] = datScale
 	}
 	
+	
+	if ("impute" %in% cleanFnx) {
+		cat("Imputing dataset\n")
+		### Impute the training data
+		datImpute=preProcess(df[, !sapply(df, is.factor)], method=imputeType) #"knnImpute",
+		df[, !sapply(df, is.factor)]=predict(datImpute, df[, !sapply(df, is.factor)])
+		
+		returnList[["Impute"]] = datImpute
+	}
 	
 	
 	if (isDT) df = df %>% data.table()
