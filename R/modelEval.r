@@ -124,6 +124,26 @@ getBalancedAcc <- function(prob, obs, posLabel, negLabel, crit=0.0001, verbose=F
 
 
 
+
+#' Simple approach to balance the probabilities from an inbalanced
+#' multiclass/multinomial model.  Divides the probability by the
+#' class frequency used in the training dataset.   Note: this calculates
+#' based on the named columns and the named frequencies matching so 
+#' makes sure they match ok
+#' 
+#' @param probs a dataframe of the probabilities, each column with the class name in factor order
+#' @param freqs named proportions from the training data as from prop.table(table(target))
+#' @export
+balanceMultiProbs <- function(probs, freqs) {
+	for (probNm in names(probs)){
+		freq = freqs[probNm]
+		probs[,probNm] = probs[,probNm]/freq 
+	}
+	probs
+}
+
+
+
 #' Pulls confusion matrix metrics from predicted and observed labels,
 #' works for both binomial and multinomial.  Calls caret confusionMatrix()
 #' and then returns as a vector. 
